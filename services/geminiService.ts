@@ -325,9 +325,19 @@ ZERO TEXT. The image must be 100% visual. No letters, no numbers, no words, no l
   }
 };
 
-export const generateMonthlyContent = async (input: PostInput): Promise<GeneratedPost[]> => {
+export const generateMonthlyContent = async (
+    input: PostInput,
+    onProgress: (progress: { currentStep: number; totalSteps: number; message: string; percentage: number }) => void
+): Promise<GeneratedPost[]> => {
     try {
         // Step 1: Generate the list of post ideas from the monthly plan
+        onProgress({
+            currentStep: 0,
+            totalSteps: 0,
+            message: 'Fase 1/4: Analizando tu plan estratégico y generando ideas...',
+            percentage: 5,
+        });
+
         const ideasResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: input.idea, // This contains the detailed monthly plan prompt
@@ -344,9 +354,28 @@ export const generateMonthlyContent = async (input: PostInput): Promise<Generate
             throw new Error("La IA no pudo generar ideas para el plan mensual.");
         }
 
+        const totalPosts = (ideas as any[]).length;
+        onProgress({
+            currentStep: 0,
+            totalSteps: totalPosts,
+            message: `Fase 2/4: ¡${totalPosts} ideas generadas! Comenzando la creación de cada post.`,
+            percentage: 15,
+        });
+
+
         // Step 2: Generate a full post for each idea sequentially to avoid rate limiting.
         const generatedPosts: GeneratedPost[] = [];
-        for (const postIdea of ideas as { idea: string }[]) {
+        for (const [index, postIdea] of (ideas as { idea: string }[]).entries()) {
+            const currentPostNumber = index + 1;
+            const percentage = 15 + Math.round((currentPostNumber / totalPosts) * 80); // Progress from 15% to 95%
+
+            onProgress({
+                currentStep: currentPostNumber,
+                totalSteps: totalPosts,
+                message: `Fase 3/4: Creando post ${currentPostNumber}/${totalPosts}: "${postIdea.idea.substring(0, 50)}..."`,
+                percentage,
+            });
+
             const individualPostInput: PostInput = {
                 ...input,
                 idea: postIdea.idea, // Override with the specific idea
@@ -368,6 +397,13 @@ export const generateMonthlyContent = async (input: PostInput): Promise<Generate
         if (generatedPosts.length === 0 && ideas.length > 0) {
             throw new Error("All individual post generations failed during the monthly plan creation. This might be due to API rate limits or content policy violations.");
         }
+
+        onProgress({
+            currentStep: totalPosts,
+            totalSteps: totalPosts,
+            message: 'Fase 4/4: Compilando y finalizando el plan mensual.',
+            percentage: 100,
+        });
 
         return generatedPosts;
 

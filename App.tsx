@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PostInput, GeneratedPost, SocialNetwork, TemplateType } from './types';
+import { PostInput, GeneratedPost, SocialNetwork, TemplateType, MonthlyProgress } from './types';
 import { generatePost, generateMonthlyContent } from './services/geminiService';
 import CreatorForm from './components/CreatorForm';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -75,6 +75,13 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [activeSocialNetwork, setActiveSocialNetwork] = useState<SocialNetwork>(SocialNetwork.Instagram);
   const [formKey, setFormKey] = useState(0);
+  const [monthlyProgress, setMonthlyProgress] = useState<MonthlyProgress>({
+    active: false,
+    currentStep: 0,
+    totalSteps: 0,
+    message: '',
+    percentage: 0,
+  });
 
   const handleGeneratePost = async (input: PostInput, mode: 'individual' | 'monthly') => {
     setIsLoading(true);
@@ -87,7 +94,11 @@ export default function App() {
       let results: GeneratedPost[];
 
       if (mode === 'monthly') {
-        results = await generateMonthlyContent(input);
+        setMonthlyProgress({ active: true, currentStep: 0, totalSteps: 0, message: 'Iniciando...', percentage: 0 });
+        const handleProgressUpdate = (progress: Omit<MonthlyProgress, 'active'>) => {
+            setMonthlyProgress({ active: true, ...progress });
+        };
+        results = await generateMonthlyContent(input, handleProgressUpdate);
       } else {
         const singleResult = await generatePost(input);
         results = [singleResult];
@@ -109,6 +120,7 @@ export default function App() {
       }
     } finally {
       setIsLoading(false);
+      setMonthlyProgress(prev => ({ ...prev, active: false }));
     }
   };
 
@@ -145,6 +157,7 @@ export default function App() {
       setIsLoading(false);
       setIsReplicating(false);
       setFormKey(prevKey => prevKey + 1);
+      setMonthlyProgress({ active: false, currentStep: 0, totalSteps: 0, message: '', percentage: 0 });
       window.scrollTo(0, 0);
   };
 
@@ -173,6 +186,7 @@ export default function App() {
               initialSocialNetwork={activeSocialNetwork}
               onGenerateAll={handleGenerateAllPosts}
               onReset={handleReset}
+              monthlyProgress={monthlyProgress}
             />
           </div>
         </div>

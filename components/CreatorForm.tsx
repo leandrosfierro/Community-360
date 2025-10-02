@@ -57,6 +57,14 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
   const [tones, setTones] = useState<Tone[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [usernames, setUsernames] = useState({
+    useGlobal: true,
+    global: 'bs360_oficial',
+    instagram: '',
+    tiktok: '',
+    linkedin: '',
+  });
+
   // Advanced options
   const [copyLength, setCopyLength] = useState<CopyLength>(CopyLength.Medium);
   const [language, setLanguage] = useState<Language>(Language.Spanish);
@@ -235,6 +243,7 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
       language,
       includeCta,
       includeHashtags,
+      usernames,
     }, creationMode);
   };
 
@@ -475,6 +484,49 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
                   </button>
                 ))}
               </div>
+            </fieldset>
+
+            <fieldset>
+                <legend className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Nombre de Usuario (para la vista previa)</legend>
+                <div className="p-4 bg-slate-50 dark:bg-gray-700/60 rounded-xl space-y-4 border dark:border-gray-600/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">Esto solo cambia el nombre en la previsualización, no afecta el contenido del post.</p>
+                    <div className="flex gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-900/80 w-full md:w-auto md:max-w-md">
+                        <button type="button" onClick={() => setUsernames(prev => ({ ...prev, useGlobal: true }))} className={`w-full text-center px-4 py-1.5 text-sm font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${usernames.useGlobal ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-white shadow' : 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/50'}`}>
+                            Usar un solo nombre
+                        </button>
+                        <button type="button" onClick={() => setUsernames(prev => ({ ...prev, useGlobal: false }))} className={`w-full text-center px-4 py-1.5 text-sm font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${!usernames.useGlobal ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-white shadow' : 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/50'}`}>
+                            Personalizar por red
+                        </button>
+                    </div>
+                    
+                    {usernames.useGlobal ? (
+                        <div className="animate-fade-in">
+                            <label htmlFor="global-username" className="block text-sm font-medium mb-1">Nombre de usuario global</label>
+                            <input 
+                                id="global-username"
+                                type="text" 
+                                value={usernames.global} 
+                                onChange={e => setUsernames(prev => ({ ...prev, global: e.target.value }))}
+                                className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                    ) : (
+                        <div className="space-y-3 animate-fade-in">
+                            <div>
+                                <label htmlFor="instagram-username" className="block text-sm font-medium mb-1">Instagram</label>
+                                <input id="instagram-username" type="text" value={usernames.instagram} onChange={e => setUsernames(prev => ({ ...prev, instagram: e.target.value }))} placeholder={usernames.global} className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"/>
+                            </div>
+                            <div>
+                                <label htmlFor="tiktok-username" className="block text-sm font-medium mb-1">TikTok</label>
+                                <input id="tiktok-username" type="text" value={usernames.tiktok} onChange={e => setUsernames(prev => ({ ...prev, tiktok: e.target.value }))} placeholder={usernames.global} className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"/>
+                            </div>
+                            <div>
+                                <label htmlFor="linkedin-username" className="block text-sm font-medium mb-1">LinkedIn (Nombre de Perfil/Página)</label>
+                                <input id="linkedin-username" type="text" value={usernames.linkedin} onChange={e => setUsernames(prev => ({ ...prev, linkedin: e.target.value }))} placeholder={usernames.global} className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"/>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </fieldset>
 
             <fieldset>

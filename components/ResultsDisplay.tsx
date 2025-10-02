@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
-import { GeneratedPost, SocialNetwork, PostInput, PostAnalysis, PostFormat } from '../types';
+import { GeneratedPost, SocialNetwork, PostInput, PostAnalysis, PostFormat, MonthlyProgress } from '../types';
 import { 
     InstagramIcon, TikTokIcon, LinkedInIcon, ShareIcon, DownloadIcon, 
     SparklesIcon, VideoIcon, ClipboardIcon, AtSymbolIcon, ArrowPathIcon, 
@@ -18,6 +18,7 @@ interface ResultsDisplayProps {
   initialSocialNetwork: SocialNetwork;
   onGenerateAll: () => void;
   onReset: () => void;
+  monthlyProgress: MonthlyProgress | null;
 }
 
 const LoadingSkeleton: React.FC = () => (
@@ -33,7 +34,82 @@ const LoadingSkeleton: React.FC = () => (
   </div>
 );
 
-const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost }> = ({ socialNetwork, post }) => {
+const MonthlyProgressDisplay: React.FC<{ progress: MonthlyProgress }> = ({ progress }) => {
+    const startTimeRef = useRef<number>(Date.now());
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setElapsedTime(Date.now() - startTimeRef.current);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatTime = (ms: number) => {
+        if (ms <= 0) return 'calculando...';
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        
+        if (minutes > 0) {
+            return `${minutes} min ${seconds.toString().padStart(2, '0')} seg`;
+        }
+        return `${seconds} seg`;
+    };
+
+    let estimatedRemainingTime = -1;
+    if (progress.currentStep > 0 && progress.percentage > 15) {
+        const timePerStep = (Date.now() - startTimeRef.current) / progress.currentStep;
+        estimatedRemainingTime = (progress.totalSteps - progress.currentStep) * timePerStep;
+    }
+
+    return (
+        <div className="bg-white/70 dark:bg-gray-800/50 p-6 sm:p-8 rounded-2xl shadow-lg dark:shadow-black/20 backdrop-blur-sm border border-white/20">
+            <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-8">
+                    <svg className="animate-spin h-8 w-8 text-blue-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Generando tu Plan Mensual</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">La IA está trabajando en tu grilla de contenidos. Esto puede tardar varios minutos.</p>
+                </div>
+
+                <div className="relative pt-1">
+                    <div className="flex mb-2 items-center justify-between">
+                        <div className="text-right w-full">
+                            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                {progress.percentage}%
+                            </span>
+                        </div>
+                    </div>
+                    <div className="overflow-hidden h-3 mb-4 text-xs flex rounded bg-blue-200 dark:bg-gray-700">
+                        <div style={{ width: `${progress.percentage}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-blue-500 to-teal-400 transition-all duration-500 ease-linear"></div>
+                    </div>
+                </div>
+
+                <div className="mt-4 text-center p-4 bg-slate-100 dark:bg-gray-900/40 rounded-lg border dark:border-gray-600/50">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        {progress.message}
+                    </p>
+                    {progress.totalSteps > 0 && 
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            (Post {progress.currentStep} de {progress.totalSteps})
+                        </p>
+                    }
+                </div>
+
+                <div className="flex justify-between mt-8 text-sm text-gray-500 dark:text-gray-400">
+                    <p>Tiempo transcurrido: <span className="font-semibold text-gray-700 dark:text-gray-300">{formatTime(elapsedTime)}</span></p>
+                    <p>Restante (aprox): <span className="font-semibold text-gray-700 dark:text-gray-300">{formatTime(estimatedRemainingTime)}</span></p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost; username: string }> = ({ socialNetwork, post, username }) => {
   const isVertical = post.postFormat === PostFormat.Story || post.postFormat === PostFormat.Reel;
   const containerClass = isVertical ? 'aspect-[9/16]' : 'aspect-square';
 
@@ -61,13 +137,13 @@ const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost
             <div className="flex-grow">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-600"></div>
-                <span className="font-semibold text-sm">bs360_oficial</span>
+                <span className="font-semibold text-sm">{username}</span>
               </div>
               <p className="text-sm mt-2 line-clamp-3">{post.mainCopy}</p>
               <p className="text-sm mt-1 opacity-80">{post.hashtags}</p>
               <div className="flex items-center gap-2 mt-2">
                 <MusicNoteIcon className="w-4 h-4" />
-                <p className="text-xs">Sonido Original - bs360_oficial</p>
+                <p className="text-xs">Sonido Original - {username}</p>
               </div>
             </div>
             {post.postFormat === PostFormat.Reel && (
@@ -95,11 +171,11 @@ const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost
       <div className="border dark:border-gray-700 rounded-lg overflow-hidden shadow-md max-w-md mx-auto">
         <div className="p-3 border-b dark:border-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-600"></div>
-            <span className="font-semibold text-sm">bs360_oficial</span>
+            <span className="font-semibold text-sm">{username}</span>
         </div>
         <div className={`${containerClass} bg-gray-200 dark:bg-gray-700`}>{imagePreview}</div>
         <div className="p-3 text-sm bg-white dark:bg-gray-800">
-            <p><span className="font-semibold">bs360_oficial</span> {post.mainCopy.split('\n\n')[0]}</p>
+            <p><span className="font-semibold">{username}</span> {post.mainCopy.split('\n\n')[0]}</p>
             <p className="whitespace-pre-wrap mt-2">{post.mainCopy.split('\n\n').slice(1).join('\n\n')}</p>
             <p className="text-gray-500 dark:text-gray-400 mt-2">{post.hashtags}</p>
         </div>
@@ -114,7 +190,7 @@ const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost
             <div className="absolute inset-0">{imagePreview}</div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
             <div className="relative z-10 p-4 text-white">
-                <p className="font-bold">@bs360_oficial</p>
+                <p className="font-bold">@{username}</p>
                 {post.title && <p className="font-bold text-md mt-2">{post.title}</p>}
                 <p className="mt-2 text-sm line-clamp-4">{post.mainCopy}</p>
                 <p className="mt-1 text-sm font-semibold">{post.hashtags}</p>
@@ -143,9 +219,9 @@ const SocialMockup: React.FC<{ socialNetwork: SocialNetwork; post: GeneratedPost
     return (
       <div className="border dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 shadow-md max-w-lg mx-auto">
           <div className="flex items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-xl shrink-0">B</div>
+              <div className="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-xl shrink-0">{username.charAt(0).toUpperCase()}</div>
               <div>
-                  <p className="font-semibold">BS360 | Impulsando Bienestar Sostenible</p>
+                  <p className="font-semibold">{username}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">1,234 seguidores</p>
               </div>
           </div>
@@ -185,7 +261,7 @@ const ScoreDisplay: React.FC<{ label: string; score: number; feedback: string }>
 };
 
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ posts, setPosts, input, isLoading, error, initialSocialNetwork, onGenerateAll, onReset }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ posts, setPosts, input, isLoading, error, initialSocialNetwork, onGenerateAll, onReset, monthlyProgress }) => {
   const [activeTab, setActiveTab] = useState<SocialNetwork>(initialSocialNetwork);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showNotification, setShowNotification] = useState<{type: 'copy' | 'publish', text: string} | null>(null);
@@ -373,6 +449,9 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ posts, setPosts, input,
     });
   };
 
+  if (isLoading && monthlyProgress && monthlyProgress.active) {
+    return <MonthlyProgressDisplay progress={monthlyProgress} />;
+  }
   if (isLoading && Object.keys(posts).length === 0) return <LoadingSkeleton />;
   if (error) return <div className="p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200 rounded-lg shadow-md">{error}</div>;
   if (Object.keys(posts).length === 0 || postArray.length === 0) {
@@ -386,6 +465,31 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ posts, setPosts, input,
 
   const hasAllPosts = Object.keys(posts).length === 3;
   const networkOrder = [SocialNetwork.Instagram, SocialNetwork.TikTok, SocialNetwork.LinkedIn];
+
+  const getUsername = () => {
+      const defaultUser = 'bs360_oficial';
+      const defaultPage = 'BS360 | Impulsando Bienestar Sostenible';
+
+      if (!input?.usernames) {
+          return activeTab === SocialNetwork.LinkedIn ? defaultPage : defaultUser;
+      }
+
+      const { useGlobal, global, instagram, tiktok, linkedin } = input.usernames;
+      const globalUser = global || defaultUser;
+      const globalPage = global || defaultPage;
+
+      if (useGlobal) {
+          return activeTab === SocialNetwork.LinkedIn ? globalPage : globalUser;
+      }
+
+      switch(activeTab) {
+          case SocialNetwork.Instagram: return instagram || globalUser;
+          case SocialNetwork.TikTok: return tiktok || globalUser;
+          case SocialNetwork.LinkedIn: return linkedin || globalPage;
+          default: return globalUser;
+      }
+  }
+  const username = getUsername();
 
   return (
     <>
@@ -431,7 +535,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ posts, setPosts, input,
               </div>
             )}
             
-            <SocialMockup socialNetwork={activeTab} post={post} />
+            <SocialMockup socialNetwork={activeTab} post={post} username={username} />
 
             {post.analysis && (
               <div className="p-4 bg-slate-100 dark:bg-gray-900/40 rounded-xl border dark:border-gray-600/50 space-y-4">

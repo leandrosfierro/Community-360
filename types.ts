@@ -59,6 +59,13 @@ export interface PostInput {
   language: Language;
   includeCta: boolean;
   includeHashtags: boolean;
+  usernames: {
+    useGlobal: boolean;
+    global: string;
+    instagram: string;
+    tiktok: string;
+    linkedin: string;
+  };
 }
 
 export interface ScoreCategory {
@@ -89,4 +96,12 @@ export interface GeneratedPost {
   generatedVideoUrl?: string;
   analysis?: PostAnalysis;
   postFormat: PostFormat;
+}
+
+export interface MonthlyProgress {
+  active: boolean;
+  currentStep: number;
+  totalSteps: number;
+  message: string;
+  percentage: number;
 }
