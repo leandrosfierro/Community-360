@@ -66,6 +66,7 @@ export interface PostInput {
     tiktok: string;
     linkedin: string;
   };
+  monthlyPostTones?: Tone[];
 }
 
 export interface ScoreCategory {

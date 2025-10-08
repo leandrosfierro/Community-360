@@ -45,6 +45,8 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
   const [topics, setTopics] = useState('');
   const [campaigns, setCampaigns] = useState('');
   const [totalPosts, setTotalPosts] = useState(12);
+  const [monthlyPostTones, setMonthlyPostTones] = useState<Tone[]>([]);
+  const [globalTone, setGlobalTone] = useState<Tone>(Tone.Neutral);
 
   // Common state
   const [userProfile, setUserProfile] = useState('');
@@ -77,6 +79,22 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
       setPostFormat(formatsForNetwork[0]);
     }
   }, [socialNetwork, postFormat]);
+  
+  useEffect(() => {
+    if (creationMode === 'monthly') {
+      const currentLength = monthlyPostTones.length;
+      if (currentLength !== totalPosts) {
+        const newTones = Array(totalPosts).fill(Tone.Neutral);
+        // Preserve existing tones if the array is just growing
+        if (totalPosts > currentLength) {
+            for(let i=0; i < currentLength; i++) {
+                newTones[i] = monthlyPostTones[i];
+            }
+        }
+        setMonthlyPostTones(newTones.slice(0, totalPosts));
+      }
+    }
+  }, [totalPosts, creationMode]);
 
 
   const handleToneChange = (tone: Tone) => {
@@ -187,6 +205,17 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
         }
     };
 
+    const handleApplyAllTones = () => {
+        setMonthlyPostTones(Array(totalPosts).fill(globalTone));
+    };
+
+    const handleMonthlyToneChange = (index: number, newTone: Tone) => {
+        const newTones = [...monthlyPostTones];
+        newTones[index] = newTone;
+        setMonthlyPostTones(newTones);
+    };
+
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
@@ -244,6 +273,7 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
       includeCta,
       includeHashtags,
       usernames,
+      monthlyPostTones: creationMode === 'monthly' ? monthlyPostTones : undefined,
     }, creationMode);
   };
 
@@ -529,22 +559,61 @@ const CreatorForm: React.FC<CreatorFormProps> = ({ onGenerate, isLoading }) => {
                 </div>
             </fieldset>
 
-            <fieldset>
-              <legend className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Tono de comunicación</legend>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Object.values(Tone).map(tone => (
-                  <label key={tone} className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition ${tones.includes(tone) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 ring-2 ring-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    <input
-                      type="checkbox"
-                      checked={tones.includes(tone)}
-                      onChange={() => handleToneChange(tone)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
-                    />
-                    <span className="text-sm">{toneEmojis[tone]} {tone}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            {creationMode === 'monthly' ? (
+                <fieldset>
+                    <legend className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Tono de comunicación por Post</legend>
+                    <div className="p-4 bg-slate-50 dark:bg-gray-700/60 rounded-xl space-y-4 border dark:border-gray-600/50">
+                        <div className="flex flex-wrap items-center gap-4">
+                            <p className="text-sm font-medium">Establecer un tono para todos los posts:</p>
+                            <select 
+                                value={globalTone} 
+                                onChange={e => setGlobalTone(e.target.value as Tone)}
+                                className="p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                {Object.values(Tone).map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <button type="button" onClick={handleApplyAllTones} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700">
+                                Aplicar a todos
+                            </button>
+                        </div>
+                        <hr className="dark:border-gray-600"/>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
+                            {monthlyPostTones.map((tone, index) => (
+                                <div key={index}>
+                                    <label htmlFor={`tone-post-${index}`} className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                                        Post {index + 1}
+                                    </label>
+                                    <select 
+                                        id={`tone-post-${index}`}
+                                        value={tone}
+                                        onChange={e => handleMonthlyToneChange(index, e.target.value as Tone)}
+                                        className="w-full p-2 border border-gray-300 rounded-md dark:bg-gray-600 dark:border-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        {Object.values(Tone).map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </fieldset>
+            ) : (
+                <fieldset>
+                  <legend className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Tono de comunicación</legend>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {Object.values(Tone).map(tone => (
+                      <label key={tone} className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition ${tones.includes(tone) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 ring-2 ring-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                        <input
+                          type="checkbox"
+                          checked={tones.includes(tone)}
+                          onChange={() => handleToneChange(tone)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
+                        />
+                        <span className="text-sm">{toneEmojis[tone]} {tone}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+            )}
           </div>
         )}
 

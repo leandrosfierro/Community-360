@@ -379,6 +379,9 @@ export const generateMonthlyContent = async (
             const individualPostInput: PostInput = {
                 ...input,
                 idea: postIdea.idea, // Override with the specific idea
+                tones: (input.monthlyPostTones && input.monthlyPostTones[index]) 
+                    ? [input.monthlyPostTones[index]] 
+                    : input.tones, // Fallback to original global tones if something is wrong
             };
             
             try {
